@@ -1,0 +1,22 @@
+{
+  "name": "fund-r-tsts",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "private": false,
+  "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.6",
+    "@nomicfoundation/hardhat-ethers": "^3.0.5",
+    "@nomicfoundation/hardhat-ignition": "^0.15.0",
+    "@nomicfoundation/hardhat-ignition-ethers": "^0.15.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.10",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.5",
+    "@typechain/hardhat": "^9.1.0",
+    "chai": "4",
+    "ethers": "^6.11.1",
+    "hardhat": "^2.22.2",
+    "hardhat-gas-reporter": "^2.1.1",
+    "solidity-coverage": "^0.8.12"
+  }
+}
