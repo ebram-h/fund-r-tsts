@@ -5,3 +5,5 @@ coverage.json
 /cache
 /artifacts
 /coverage
+
+deployments/

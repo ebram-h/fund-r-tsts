@@ -26,40 +26,22 @@ contract FundRTsts is Ownable {
     );
     event ProjectFunded(uint indexed projectId, uint amountFunded);
     event ProjectFundCompleted(uint indexed projectId);
-    event ProjectRecipientChanged(
-        uint indexed projectId,
-        address newRecipient,
-        address newRecipientSpecifier
-    );
+    event ProjectRecipientChanged(uint indexed projectId, address newRecipient, address newRecipientSpecifier);
 
     constructor() Ownable(msg.sender) {}
 
     modifier onlyExistingProjects(uint _projectId) {
-        require(
-            _projectId < projects.length,
-            "The projectId doesn't refer to any added project."
-        );
+        require(_projectId < projects.length, "The projectId doesn't refer to any existing project.");
         _;
     }
 
     modifier onlyNotFullyFunded(uint _projectId) {
-        require(
-            !isFullyFunded(_projectId),
-            "Cannot do this on a fully funded project."
-        );
+        require(!isFullyFunded(_projectId), "Cannot do this on a fully funded project.");
         _;
     }
 
     modifier noZeroAddress(address _addr) {
-        require(_addr == address(0), "Zero address not acceptable.");
-        _;
-    }
-
-    modifier noInvalidPageSize(uint _pageSize) {
-        require(
-            _pageSize > 0 && _pageSize <= 30,
-            "Page size needs to be greater than 0 and less than 31"
-        );
+        require(_addr != address(0x0), "Zero address not acceptable.");
         _;
     }
 
@@ -69,47 +51,19 @@ contract FundRTsts is Ownable {
         address _recipient,
         address _recipientSpecifier,
         uint _amountNeeded
-    )
-        external
-        onlyOwner
-        noZeroAddress(_recipient)
-        noZeroAddress(_recipientSpecifier)
-    {
-        require(_amountNeeded > 0, "It's not a funding project that way");
+    ) external onlyOwner noZeroAddress(_recipient) noZeroAddress(_recipientSpecifier) {
+        require(_amountNeeded > 0, "The project must accept some amount.");
 
-        projects.push(
-            Project(
-                _title,
-                _description,
-                _recipient,
-                _recipientSpecifier,
-                _amountNeeded,
-                0,
-                false
-            )
-        );
-        emit ProjectAdded(
-            projects.length - 1,
-            _title,
-            _description,
-            _recipient,
-            _recipientSpecifier,
-            _amountNeeded
-        );
+        projects.push(Project(_title, _description, _recipient, _recipientSpecifier, _amountNeeded, 0, false));
+        emit ProjectAdded(projects.length - 1, _title, _description, _recipient, _recipientSpecifier, _amountNeeded);
     }
 
     function fundProject(
         uint _projectId
-    )
-        external
-        payable
-        onlyExistingProjects(_projectId)
-        onlyNotFullyFunded(_projectId)
-    {
+    ) external payable onlyExistingProjects(_projectId) onlyNotFullyFunded(_projectId) {
         require(msg.value > 0, "Cannot fund 0 ETH");
 
-        uint remainingFundNeeded = projects[_projectId].amountNeeded -
-            projects[_projectId].amountFunded;
+        uint remainingFundNeeded = projects[_projectId].amountNeeded - projects[_projectId].amountFunded;
         uint change = 0;
         if (msg.value > remainingFundNeeded) {
             change = msg.value - remainingFundNeeded;
@@ -138,12 +92,7 @@ contract FundRTsts is Ownable {
         uint _projectId,
         address _newRecipient,
         address _newRecipientSpecifier
-    )
-        external
-        onlyExistingProjects(_projectId)
-        noZeroAddress(_newRecipient)
-        noZeroAddress(_newRecipientSpecifier)
-    {
+    ) external onlyExistingProjects(_projectId) noZeroAddress(_newRecipient) noZeroAddress(_newRecipientSpecifier) {
         require(
             msg.sender == projects[_projectId].recipientSpecifier,
             "You do not have the right to change the recipient of this project."
@@ -156,16 +105,9 @@ contract FundRTsts is Ownable {
         projects[_projectId].recipient = _newRecipient;
         projects[_projectId].recipientSpecifier = _newRecipientSpecifier;
 
-        emit ProjectRecipientChanged(
-            _projectId,
-            _newRecipient,
-            _newRecipientSpecifier
-        );
+        emit ProjectRecipientChanged(_projectId, _newRecipient, _newRecipientSpecifier);
 
-        if (
-            isFullyFunded(_projectId) &&
-            !projects[_projectId].areFundsTransferred
-        ) {
+        if (isFullyFunded(_projectId) && !projects[_projectId].areFundsTransferred) {
             trySendFundsToRecipient(_projectId);
         }
     }
@@ -174,63 +116,16 @@ contract FundRTsts is Ownable {
         return projects;
     }
 
-    // Maybe delete if getAllProjects above works.
-    function getLastAddedProjects(
-        uint _pageSize,
-        uint _page
-    ) external view noInvalidPageSize(_pageSize) returns (Project[] memory) {
-        Project[] memory result = new Project[](_pageSize);
-        uint j = 0;
-        for (
-            uint i = projects.length - 1;
-            i >= (projects.length - _pageSize * _page) && i > 0;
-            i--
-        ) {
-            result[j] = projects[i];
-            j++;
-        }
-        return result;
-    }
-
-    function getProjectsForRecipient(
-        address _recipient,
-        uint _pageSize,
-        uint _page
-    )
-        external
-        view
-        noZeroAddress(_recipient)
-        noInvalidPageSize(_pageSize)
-        returns (Project[] memory)
-    {
-        Project[] memory result = new Project[](_pageSize);
-        uint j = 0;
-        for (
-            uint i = projects.length - 1;
-            i >= (projects.length - _pageSize * _page) && i > 0;
-            i--
-        ) {
-            if (projects[i].recipient == _recipient) {
-                result[j] = projects[i];
-                j++;
-            }
-        }
-        return result;
-    }
-
-    function isFullyFunded(
-        uint _projectId
-    ) public view onlyExistingProjects(_projectId) returns (bool) {
-        return
-            projects[_projectId].amountFunded >=
-            projects[_projectId].amountNeeded;
+    function isFullyFunded(uint _projectId) public view onlyExistingProjects(_projectId) returns (bool) {
+        return projects[_projectId].amountFunded >= projects[_projectId].amountNeeded;
     }
 
     // Maybe use call or send so that the thrown error won't revert the whole transaction.
-    function trySendFundsToRecipient(uint _projectId) private {
-        payable(projects[_projectId].recipient).transfer(
-            projects[_projectId].amountNeeded
-        );
-        projects[_projectId].areFundsTransferred = true;
+    function trySendFundsToRecipient(uint _projectId) private returns (bool) {
+        (bool sent, ) = payable(projects[_projectId].recipient).call{value: projects[_projectId].amountNeeded}("");
+        if (sent) {
+            projects[_projectId].areFundsTransferred = true;
+        }
+        return sent;
     }
 }
